@@ -45,10 +45,24 @@ function App() {
   const startVideo = async () => {
     try {
       setError(null);
+      console.log('Tentative d\'accès à la caméra...');
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      console.log('Caméra accessible avec succès');
+      setIsStreamActive(true); // Mettre à jour l'état ici
+  
       if (videoRef.current) {
+        console.log('Référence vidéo trouvée');
         videoRef.current.srcObject = stream;
-        setIsStreamActive(true);
+  
+        // Forcer la lecture de la vidéo
+        videoRef.current.play().then(() => {
+          console.log('La vidéo a été forcée à jouer');
+        }).catch((error) => {
+          console.error('Erreur lors de la lecture de la vidéo :', error);
+          setError('Impossible de démarrer la vidéo. Veuillez réessayer.');
+        });
+      } else {
+        console.error('Référence vidéo non trouvée');
       }
     } catch (error) {
       console.error('Erreur d\'accès à la caméra:', error);
@@ -57,22 +71,23 @@ function App() {
   };
 
   const handlePlay = () => {
+    console.log('La vidéo a commencé à jouer'); // Ajoutez ce log
     if (!canvasRef.current || !videoRef.current) return;
-
+  
     const canvas = canvasRef.current;
     const video = videoRef.current;
-
+  
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
+  
     const detectFaces = async () => {
       if (!video || !canvas) return;
-
+  
       const detections = await faceapi
         .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
         .withFaceLandmarks()
         .withFaceExpressions();
-
+  
       const context = canvas.getContext('2d');
       if (context) {
         context.clearRect(0, 0, canvas.width, canvas.height);
@@ -80,10 +95,10 @@ function App() {
         faceapi.draw.drawFaceLandmarks(canvas, detections);
         faceapi.draw.drawFaceExpressions(canvas, detections);
       }
-
+  
       requestAnimationFrame(detectFaces);
     };
-
+  
     detectFaces();
   };
 
@@ -130,14 +145,16 @@ function App() {
             </div>
           ) : (
             <>
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                onPlay={handlePlay}
-                className="w-full"
-              />
+              {isStreamActive && (
+  <video
+    ref={videoRef}
+    autoPlay
+    playsInline
+    muted
+    onPlay={handlePlay}
+    className="w-full"
+  />
+)}
               <canvas
                 ref={canvasRef}
                 className="absolute top-0 left-0 w-full h-full"
